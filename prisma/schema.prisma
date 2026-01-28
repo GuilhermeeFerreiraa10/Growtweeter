@@ -1,0 +1,48 @@
+generator client {
+  provider = "prisma-client-js"
+}
+//----------------------------------------------------------------//
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+//---------------------------------------------------------------//
+model User {
+  id        String   @id @default(uuid())
+  username  String   @unique
+  email     String   @unique
+  password  String
+  isLogged Boolean  @default(false)
+  tweets    Tweet[]
+  likes     Like[]
+  followers Follow[] @relation("following")
+  following Follow[] @relation("follower")
+}
+//---------------------------------------------------------------//
+model Tweet {
+  id        String   @id @default(uuid())
+  content   String
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  likes     Like[]
+}
+//---------------------------------------------------------------//
+model Like {
+  id        String @id @default(uuid())
+  userId    String
+  tweetId   String
+  user      User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tweet     Tweet  @relation(fields: [tweetId], references: [id], onDelete: Cascade)
+  @@unique([userId, tweetId])
+}
+//---------------------------------------------------------------//
+model Follow {
+  id          String @id @default(uuid())
+  followerId  String
+  followingId String
+  follower    User   @relation("follower", fields: [followerId], references: [id], onDelete: Cascade)
+  following   User   @relation("following", fields: [followingId], references: [id], onDelete: Cascade)
+  @@unique([followerId, followingId])
+}
