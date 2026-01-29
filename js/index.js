@@ -40,24 +40,18 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     let processandoLike = false;
-
-    // 2. FUNÇÃO CURTIR COM OPÇÃO B (SIMULAÇÃO PARA FIXOS)
     window.curtir = async (tweetId) => {
         if (processandoLike) return; 
-
-        // --- IMPLEMENTAÇÃO OPÇÃO B: TWEETS FIXOS ---
-        if (tweetId === "1" || tweetId === "2") {
+        if (tweetId === "1" || tweetId === "2" || tweetId === "3") {
             const tweetFixo = feedPadrao.find(t => t.id === tweetId);
             if (tweetFixo) {
                 tweetFixo.euCurti = !tweetFixo.euCurti;
                 tweetFixo.likes += tweetFixo.euCurti ? 1 : -1;
-                renderizarFeed(); // Atualiza a tela instantaneamente
+                renderizarFeed();
                 console.log("Simulação de like nos fixos ativa.");
-                return; // Sai da função aqui, não vai para o banco
+                return;
             }
         }
-
-        // --- LÓGICA NORMAL PARA TWEETS REAIS ---
         if (!user.id) return alert("Sincronize seu ID no console!");
         
         const tweetNoFeed = feed.find(t => t.id === tweetId);
@@ -93,7 +87,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    // 3. TWEETAR
     if (btnTweetar) {
         btnTweetar.onclick = async () => {
             const texto = inputTweet.value.trim();
@@ -116,8 +109,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         };
     }
-
-    // 4. TROCA DE TEMA (DARK/LIGHT)
     if (btnTema) {
         btnTema.onclick = () => {
             document.documentElement.classList.toggle('dark-mode');
@@ -132,8 +123,6 @@ document.addEventListener('DOMContentLoaded', () => {
             btnTema.textContent = '☀️';
         }
     }
-
-    // 5. EXCLUIR
     window.excluirTweet = async (id) => {
         if (!confirm("Deseja apagar este tweet permanentemente?")) return;
         try {
