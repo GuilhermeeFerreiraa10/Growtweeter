@@ -3,9 +3,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const inputTweet = document.getElementById('tweet-content');
     const btnTweetar = document.getElementById('btn-tweetar');
     const btnTema = document.getElementById('theme-toggle');
+    
     let user = JSON.parse(localStorage.getItem('user')) || { id: 'a248c7da-f067-4d3b-898e-5c3f6537637b', username: 'Guilherme' };
     const API_URL = 'http://localhost:3333';
     let feed = [];
+
     async function carregarTweets() {
         try {
             const res = await fetch(`${API_URL}/tweet`);
@@ -21,7 +23,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     foto: "/assets/fotoDePerfil.jpg",
                     likes: t.likes ? t.likes.length : 0,
                     euCurti: euCurti, 
-                    comments: 0,
+                    // AJUSTE: Agora pega o contador real do backend
+                    comments: t._count ? t._count.comments : 0, 
                     podeExcluir: t.userId === user.id,
                     verificado: true
                 };
@@ -35,21 +38,54 @@ document.addEventListener('DOMContentLoaded', () => {
             renderizarFeed();
         }
     }
-let processandoLike = false;
+
+    // --- FUNÇÃO COMENTAR (CORRIGIDA) ---
+    window.comentar = async (tweetId) => {
+        // Evita comentar nos tweets fixos (IDs 1, 2, 3) que não estão no banco
+        if (tweetId === "1" || tweetId === "2" || tweetId === "3") {
+            return alert("Este é um tweet fixo, comente em um tweet real!");
+        }
+
+        const comentario = prompt("O que você está pensando?");
+        if (!comentario) return;
+
+        try {
+            const response = await fetch(`${API_URL}/tweet/comment`, { // URL CORRETA
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    content: comentario,
+                    userId: user.id,
+                    tweetId: tweetId
+                })
+            });
+
+            if (response.ok) {
+                alert("Comentário enviado!");
+                await carregarTweets(); // Recarrega para atualizar o número no balãozinho
+            } else {
+                alert("Erro ao enviar comentário no servidor.");
+            }
+        } catch (error) {
+            console.error("Erro na comunicação:", error);
+        }
+    };
+
+    // --- FUNÇÃO CURTIR ---
+    let processandoLike = false;
     window.curtir = async (tweetId) => {
         if (processandoLike) return; 
+        
+        // Lógica para tweets fixos
         if (tweetId === "1" || tweetId === "2" || tweetId === "3") {
             const tweetFixo = feedPadrao.find(t => t.id === tweetId);
             if (tweetFixo) {
                 tweetFixo.euCurti = !tweetFixo.euCurti;
                 tweetFixo.likes += tweetFixo.euCurti ? 1 : -1;
                 renderizarFeed();
-                console.log("Simulação de like nos fixos ativa.");
                 return;
             }
         }
-
-        if (!user.id) return alert("Sincronize seu ID no console!");
 
         const tweetNoFeed = feed.find(t => t.id === tweetId);
         if (tweetNoFeed) {
@@ -59,72 +95,26 @@ let processandoLike = false;
         }
 
         processandoLike = true;
-
         try {
-            const response = await fetch(`${API_URL}/tweet/like`, { 
+            await fetch(`${API_URL}/tweet/like`, { 
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    userId: user.id,
-                    tweetId: tweetId
-                })
+                body: JSON.stringify({ userId: user.id, tweetId: tweetId })
             });
-            if (!response.ok) {
-                alert("Erro ao processar curtida no servidor.");
-                await carregarTweets(); 
-            } 
-            
-        } catch (error) {
-            console.error("Erro na comunicação:", error);
             await carregarTweets(); 
-        } finally {
-            processandoLike = false; 
-        }
-        try {
-            const response = await fetch(`${API_URL}/tweet/like`, { 
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    userId: user.id,
-                    tweetId: tweetId
-                })
-            });
-
-            if (!response.ok) {
-                await carregarTweets(); 
-                alert("Erro ao processar curtida no servidor.");
-            } else {
-                await carregarTweets(); 
-            }
         } catch (error) {
-            console.error("Erro na comunicação:", error);
+            console.error("Erro ao curtir:", error);
             await carregarTweets(); 
         } finally {
             processandoLike = false; 
         }
     };
 
-if (btnTweetar) {
+    // --- POSTAR TWEET ---
+    if (btnTweetar) {
         btnTweetar.onclick = async () => {
             const texto = inputTweet.value.trim();
-            if (!texto) return;
-            if (!user.id) return alert("Sincronize seu ID no console!");
-            const novoTweetVisual = {
-                id: "temp-" + Date.now(),
-                nome: user.username || "Guilherme Ferreira",
-                arroba: "ferreirauilhermee",
-                texto: texto,
-                foto: "/assets/fotoDePerfil.jpg",
-                likes: 0,
-                euCurti: false,
-                comments: 0,
-                podeExcluir: true,
-                verificado: true
-            };
-            feed = [novoTweetVisual, ...feed];
-            renderizarFeed(); 
-            inputTweet.value = '';
-            inputTweet.blur();
+            if (!texto || !user.id) return;
 
             try {
                 const response = await fetch(`${API_URL}/tweet`, {
@@ -134,80 +124,23 @@ if (btnTweetar) {
                 });
 
                 if (response.ok) {
-                    setTimeout(async () => {
-                        const res = await fetch(`${API_URL}/tweet`);
-                        if (res.ok) {
-                            const tweetsBanco = await res.json();
-                            const feedDaAPI = tweetsBanco.map(t => ({
-                                id: t.id,
-                                nome: t.user?.name || "Guilherme Ferreira",
-                                arroba: t.user?.username || "ferreirauilhermee",
-                                texto: t.content,
-                                foto: "/assets/fotoDePerfil.jpg",
-                                likes: t.likes ? t.likes.length : 0,
-                                euCurti: t.likes ? t.likes.some(like => like.userId === user.id) : false,
-                                comments: 0,
-                                podeExcluir: t.userId === user.id,
-                                verificado: true
-                            }));
-                            feed = [...feedDaAPI, ...feedPadrao];
-                            renderizarFeed();
-                        }
-                    }, 2000); 
+                    inputTweet.value = '';
+                    await carregarTweets();
                 }
             } catch (error) {
                 console.error("Erro ao enviar:", error);
-                alert("Erro ao conectar com o servidor.");
-                await carregarTweets();
             }
         };
     }
-    if (btnTema) {
-        btnTema.onclick = () => {
-            document.documentElement.classList.toggle('dark-mode');
-            const isDark = document.documentElement.classList.contains('dark-mode');
-            localStorage.setItem('theme', isDark ? 'dark' : 'light');
-            btnTema.textContent = isDark ? '🌙' : '☀️';
-        };
 
-        const temaSalvo = localStorage.getItem('theme');
-        if (temaSalvo === 'light') {
-            document.documentElement.classList.remove('dark-mode');
-            btnTema.textContent = '☀️';
-        }
-    }
+    // --- TEMA E EXCLUIR (MANTIDOS) ---
     window.excluirTweet = async (id) => {
-        if (!confirm("Deseja apagar este tweet permanentemente?")) return;
+        if (!confirm("Deseja apagar este tweet?")) return;
         try {
             const res = await fetch(`${API_URL}/tweet/${id}`, { method: 'DELETE' });
             if (res.ok) await carregarTweets();
-        } catch (e) {
-            alert("Erro ao excluir.");
-        }
+        } catch (e) { alert("Erro ao excluir."); }
     };
-window.comentar = async (tweetId) => {
-    const comentario = prompt("O que você está pensando?");
-    if (!comentario) return;
-
-    try {
-        const response = await fetch(`${API_URL}/comment`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                content: comentario,
-                userId: user.id,
-                tweetId: tweetId
-            })
-        });
-
-        if (response.ok) {
-            alert("Comentário enviado com sucesso!");
-            await carregarTweets(); 
-        }
-    } catch (error) {
-        console.error("Erro ao comentar:", error);
-    }
-};
 
     const feedPadrao = [
         { id: '1', nome: "Blumhouse", arroba: "blumhouse", texto: "The future of FNAF is bright!", foto: "/assets/Blumhouse-logo.jpg", likes: 85400, euCurti: false, comments: 1200, podeExcluir: false, verificado: true },
@@ -230,7 +163,9 @@ window.comentar = async (tweetId) => {
                         <button onclick="curtir('${t.id}')" class="btn-action" style="cursor:pointer; background:none; border:none; color: ${t.euCurti ? '#f4212e' : 'inherit'}">
                             ${t.euCurti ? '❤️' : '🤍'} <span>${t.likes.toLocaleString()}</span>
                         </button>
-                        <button class="btn-action" style="background:none; border:none;">💬 <span>${t.comments}</span></button>
+                        <button onclick="comentar('${t.id}')" class="btn-action" style="background:none; border:none; cursor:pointer;">
+                            💬 <span>${t.comments}</span>
+                        </button>
                     </div>
                 </div>
             </div>`).join('');

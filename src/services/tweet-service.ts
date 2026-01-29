@@ -18,7 +18,10 @@ export class TweetService {
         user: true,
         likes: true,
         _count: {
-          select: { comments: true }
+          select: {
+             likes: true,
+             comments: true 
+            }
         }
       },
       orderBy: { createdAt: 'desc' }
