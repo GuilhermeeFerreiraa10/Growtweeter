@@ -2,9 +2,9 @@ import "dotenv/config";
 import express from "express";
 import cors from "cors";
 import path from "path";
-import userRouter from "./routes/user.router"; 
-import tweetRouter from "./routes/tweet.router";
-import likeRouter from "./routes/like.router"; 
+import userRouter from "./src/routes/user.router"; 
+import tweetRouter from "./src/routes/tweet.router";
+import likeRouter from "./src/routes/like.router"; 
 
 const app = express();
 
