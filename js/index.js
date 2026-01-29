@@ -5,28 +5,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnTema = document.getElementById('theme-toggle');
     
     let user = JSON.parse(localStorage.getItem('user')) || { id: 'a248c7da-f067-4d3b-898e-5c3f6537637b', username: 'Guilherme' };
-    const API_URL = 'https://growtweet.vercel.app'; 
+    const API_URL = 'https://growtweet.vercel.app';
     let feed = [];
-
-    const aplicarTema = (tema) => {
-        if (tema === 'dark') {
-            document.documentElement.classList.add('dark-mode');
-            if (btnTema) btnTema.textContent = '🌙';
-        } else {
-            document.documentElement.classList.remove('dark-mode');
-            if (btnTema) btnTema.textContent = '☀️';
-        }
-    };
-
-    if (btnTema) {
-        btnTema.onclick = () => {
-            const novoTema = document.documentElement.classList.contains('dark-mode') ? 'light' : 'dark';
-            localStorage.setItem('theme', novoTema);
-            aplicarTema(novoTema);
-        };
-    }
-    aplicarTema(localStorage.getItem('theme') || 'light');
-
 
     async function carregarTweets() {
         try {
@@ -58,7 +38,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    // --- FUNÇÃO COMENTAR (CORRIGIDA) ---
     window.comentar = async (tweetId) => {
+        // Evita comentar nos tweets fixos (IDs 1, 2, 3) que não estão no banco
         if (tweetId === "1" || tweetId === "2" || tweetId === "3") {
             return alert("Este é um tweet fixo, comente em um tweet real!");
         }
@@ -67,7 +49,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!comentario) return;
 
         try {
-            const response = await fetch(`${API_URL}/tweet/comment`, {
+            const response = await fetch(`${API_URL}/tweet/comment`, { // URL CORRETA
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -78,21 +60,22 @@ document.addEventListener('DOMContentLoaded', () => {
             });
 
             if (response.ok) {
-                alert("Comentário enviado com sucesso! ✅");
-                await carregarTweets(); 
+                alert("Comentário enviado!");
+                await carregarTweets(); // Recarrega para atualizar o número no balãozinho
             } else {
                 alert("Erro ao enviar comentário no servidor.");
             }
         } catch (error) {
             console.error("Erro na comunicação:", error);
-            alert("Erro de conexão com o servidor.");
         }
     };
 
+    // --- FUNÇÃO CURTIR ---
     let processandoLike = false;
     window.curtir = async (tweetId) => {
         if (processandoLike) return; 
         
+        // Lógica para tweets fixos
         if (tweetId === "1" || tweetId === "2" || tweetId === "3") {
             const tweetFixo = feedPadrao.find(t => t.id === tweetId);
             if (tweetFixo) {
@@ -101,6 +84,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 renderizarFeed();
                 return;
             }
+        }
+
+        const tweetNoFeed = feed.find(t => t.id === tweetId);
+        if (tweetNoFeed) {
+            tweetNoFeed.euCurti = !tweetNoFeed.euCurti;
+            tweetNoFeed.likes += tweetNoFeed.euCurti ? 1 : -1; 
+            renderizarFeed();
         }
 
         processandoLike = true;
@@ -113,11 +103,13 @@ document.addEventListener('DOMContentLoaded', () => {
             await carregarTweets(); 
         } catch (error) {
             console.error("Erro ao curtir:", error);
+            await carregarTweets(); 
         } finally {
             processandoLike = false; 
         }
     };
 
+    // --- POSTAR TWEET ---
     if (btnTweetar) {
         btnTweetar.onclick = async () => {
             const texto = inputTweet.value.trim();
@@ -140,21 +132,19 @@ document.addEventListener('DOMContentLoaded', () => {
         };
     }
 
+    // --- TEMA E EXCLUIR (MANTIDOS) ---
     window.excluirTweet = async (id) => {
-        if (!confirm("Deseja apagar este tweet permanentemente?")) return;
+        if (!confirm("Deseja apagar este tweet?")) return;
         try {
             const res = await fetch(`${API_URL}/tweet/${id}`, { method: 'DELETE' });
-            if (res.ok) {
-                alert("Tweet removido! ✨");
-                await carregarTweets();
-            }
+            if (res.ok) await carregarTweets();
         } catch (e) { alert("Erro ao excluir."); }
     };
 
     const feedPadrao = [
         { id: '1', nome: "Blumhouse", arroba: "blumhouse", texto: "The future of FNAF is bright!", foto: "/assets/Blumhouse-logo.jpg", likes: 85400, euCurti: false, comments: 1200, podeExcluir: false, verificado: true },
         { id: '2', nome: "GrowDev", arroba: "growdevers", texto: "Vamos codar hoje?", foto: "/assets/growdev.png", likes: 1200, euCurti: false, comments: 45, podeExcluir: false, verificado: true },
-        { id: '3', nome: "Dexter Moser", arroba: "michaelC.Hall", texto: "Open your eyes and look at what you did!", foto: "/assets/Michael C. Hall.jpg", likes: 1200, euCurti: false, comments: 4550, podeExcluir: false, verificado: true }
+        { id: '3', nome: "Dexter Moser", arroba: "michaelC.Hall", texto: "Open your eyes and look at what you did!", foto: "/assets/Michael C. Hall.jpg", likes: 1200, euCurti: false, comments: 45, podeExcluir: false, verificado: true }
     ];
 
     function renderizarFeed() {
