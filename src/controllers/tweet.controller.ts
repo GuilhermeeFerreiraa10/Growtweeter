@@ -1,4 +1,3 @@
-// src/controllers/tweet.controller.ts
 import { Request, Response } from "express";
 import { TweetService } from "../services/tweet-service";
 
@@ -7,7 +6,6 @@ const tweetService = new TweetService();
 export class TweetController {
   async handle(req: Request, res: Response) {
     try {
-      // O seu frontend envia { content, userId }
       const { content, userId } = req.body;
 
       if (!content || !userId) {

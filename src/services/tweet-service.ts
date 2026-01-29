@@ -16,7 +16,10 @@ export class TweetService {
     return await prisma.tweet.findMany({
       include: {
         user: true,
-        likes: true
+        likes: true,
+        _count: {
+          select: { comments: true }
+        }
       },
       orderBy: { createdAt: 'desc' }
     });

@@ -4,6 +4,7 @@ import cors from "cors";
 import path from "path";
 import userRouter from "./routes/user.router";
 import tweetRouter from "./routes/tweet.router";
+import commentRouter from "./routes/comment.router"
 
 const app = express();
 
@@ -12,8 +13,8 @@ app.use(express.json());
 
 app.use(userRouter); 
 app.use(tweetRouter);
+app.use(commentRouter);
 
-// Servir o Frontend
 const rootPath = path.join(__dirname, "..");
 app.use("/css", express.static(path.join(rootPath, "css")));
 app.use("/js", express.static(path.join(rootPath, "js")));

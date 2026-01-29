@@ -3,11 +3,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const inputTweet = document.getElementById('tweet-content');
     const btnTweetar = document.getElementById('btn-tweetar');
     const btnTema = document.getElementById('theme-toggle');
-let user = JSON.parse(localStorage.getItem('user')) || { id: 'a248c7da-f067-4d3b-898e-5c3f6537637b', username: 'Guilherme' };
+    let user = JSON.parse(localStorage.getItem('user')) || { id: 'a248c7da-f067-4d3b-898e-5c3f6537637b', username: 'Guilherme' };
     const API_URL = 'http://localhost:3333';
     let feed = [];
-
-    // 1. CARREGAR TWEETS DO BANCO
     async function carregarTweets() {
         try {
             const res = await fetch(`${API_URL}/tweet`);
@@ -37,12 +35,9 @@ let user = JSON.parse(localStorage.getItem('user')) || { id: 'a248c7da-f067-4d3b
             renderizarFeed();
         }
     }
-
 let processandoLike = false;
     window.curtir = async (tweetId) => {
         if (processandoLike) return; 
-
-        // 1. TRATAMENTO PARA TWEETS FIXOS (Simulação)
         if (tweetId === "1" || tweetId === "2" || tweetId === "3") {
             const tweetFixo = feedPadrao.find(t => t.id === tweetId);
             if (tweetFixo) {
@@ -190,6 +185,29 @@ if (btnTweetar) {
             alert("Erro ao excluir.");
         }
     };
+window.comentar = async (tweetId) => {
+    const comentario = prompt("O que você está pensando?");
+    if (!comentario) return;
+
+    try {
+        const response = await fetch(`${API_URL}/comment`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                content: comentario,
+                userId: user.id,
+                tweetId: tweetId
+            })
+        });
+
+        if (response.ok) {
+            alert("Comentário enviado com sucesso!");
+            await carregarTweets(); 
+        }
+    } catch (error) {
+        console.error("Erro ao comentar:", error);
+    }
+};
 
     const feedPadrao = [
         { id: '1', nome: "Blumhouse", arroba: "blumhouse", texto: "The future of FNAF is bright!", foto: "/assets/Blumhouse-logo.jpg", likes: 85400, euCurti: false, comments: 1200, podeExcluir: false, verificado: true },
