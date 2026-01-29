@@ -29,5 +29,4 @@ if (process.env.NODE_ENV !== 'production') {
         console.log(`🚀 Backend rodando em http://localhost:${PORT}`);
     });
 }
-
 export default app;
