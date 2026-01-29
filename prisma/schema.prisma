@@ -15,6 +15,7 @@ model User {
   isLogged Boolean  @default(false)
   tweets    Tweet[]
   likes     Like[]
+  comments   Comment[]
   followers Follow[] @relation("following")
   following Follow[] @relation("follower")
 }
@@ -27,6 +28,7 @@ model Tweet {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   likes     Like[]
+  comments Comment[]
 }
 //---------------------------------------------------------------//
 model Like {
@@ -47,3 +49,12 @@ model Follow {
   @@unique([followerId, followingId])
 }
 //------------------------------------------------------------------------------------------//
+model Comment {
+  id        String   @id @default(uuid())
+  content   String
+  createdAt DateTime @default(now())
+  userId    String
+  tweetId   String
+  user      User     @relation(fields: [userId], references: [id])
+  tweet     Tweet    @relation(fields: [tweetId], references: [id])
+}
