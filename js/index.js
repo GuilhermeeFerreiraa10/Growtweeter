@@ -3,7 +3,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const inputTweet = document.getElementById('tweet-content');
     const btnTweetar = document.getElementById('btn-tweetar');
     const btnTema = document.getElementById('theme-toggle');
-
     const API_URL = 'https://growtweet.vercel.app';
     let feed = [];
     let user = { id: '', username: 'Guilherme' };
@@ -17,83 +16,47 @@ document.addEventListener('DOMContentLoaded', () => {
                 user.id = usuarios[0].id;
                 user.username = usuarios[0].username || "Guilherme";
                 localStorage.setItem('user', JSON.stringify(user));
-                console.log("✅ Usuário sincronizado com o banco:", user.id);
+                console.log("✅ Usuário sincronizado:", user.id);
             }
         } catch (e) {
-            console.error("❌ Erro ao buscar usuário do banco, tentando localStorage...");
+            console.error("❌ Erro na sincronização, usando backup...");
             user = JSON.parse(localStorage.getItem('user')) || user;
         }
         carregarTweets();
     }
-    const aplicarTema = (tema) => {
-        if (tema === 'dark') {
-            document.documentElement.classList.add('dark-mode');
-            if (btnTema) btnTema.textContent = '🌙';
-        } else {
-            document.documentElement.classList.remove('dark-mode');
-            if (btnTema) btnTema.textContent = '☀️';
-        }
-    };
-    if (btnTema) {
-        btnTema.onclick = () => {
-            const novoTema = document.documentElement.classList.contains('dark-mode') ? 'light' : 'dark';
-            localStorage.setItem('theme', novoTema);
-            aplicarTema(novoTema);
-        };
-    }
-    aplicarTema(localStorage.getItem('theme') || 'light');
-    async function carregarTweets() {
-        try {
-            const res = await fetch(`${API_URL}/tweet`);
-            if (!res.ok) throw new Error("API Offline");
-            const tweetsBanco = await res.json();
-            const feedDaAPI = tweetsBanco.map(t => ({
-                id: t.id,
-                nome: t.user?.name || "Guilherme Ferreira",
-                arroba: t.user?.username || "ferreirauilhermee",
-                texto: t.content,
-                foto: "/assets/fotoDePerfil.jpg",
-                likes: t.likes ? t.likes.length : 0,
-                euCurti: t.likes ? t.likes.some(l => l.userId === user.id) : false,
-                comments: 0, 
-                podeExcluir: t.userId === user.id
-            }));
-            feed = [...feedDaAPI, ...feedPadrao];
-            renderizarFeed();
-        } catch (e) {
-            feed = feedPadrao;
-            renderizarFeed();
-        }
-    }
+
     window.curtir = async (tweetId) => {
         if (["1", "2", "3"].includes(tweetId)) {
             const t = feedPadrao.find(x => x.id === tweetId);
             t.euCurti = !t.euCurti;
             t.likes += t.euCurti ? 1 : -1;
             renderizarFeed();
-            return;
+            return; 
         }
-        const tweetEncontrado = feed.find(t => t.id === tweetId);
-        if (!tweetEncontrado) return;
-        const rota = tweetEncontrado.euCurti ? '/tweet/unlike' : '/tweet/like';
+
         try {
-            const res = await fetch(`${API_URL}${rota}`, { 
+            const res = await fetch(`${API_URL}/like`, { 
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ userId: user.id, tweetId: tweetId })
+                body: JSON.stringify({ 
+                    userId: user.id, 
+                    tweetId: tweetId 
+                })
             });
-            if (res.ok) await carregarTweets(); 
+
+            if (res.ok) {
+                await carregarTweets(); 
+            }
         } catch (error) {
-            console.error("Erro ao curtir");
+            console.error("❌ Erro ao processar like no servidor");
         }
     };
 
-    // --- TWEETAR ---
     if (btnTweetar) {
         btnTweetar.onclick = async () => {
             const texto = inputTweet.value.trim();
             if (!texto || !user.id) {
-                alert("Aguarde a sincronização do usuário ou crie um usuário no Postman.");
+                alert("Aguarde a sincronização ou verifique o usuário.");
                 return;
             }
             try {
@@ -106,8 +69,33 @@ document.addEventListener('DOMContentLoaded', () => {
                     inputTweet.value = '';
                     await carregarTweets();
                 }
-            } catch (e) { console.error("Erro ao postar"); }
+            } catch (e) { console.error("❌ Erro ao postar tweet"); }
         };
+    }
+
+    async function carregarTweets() {
+        try {
+            const res = await fetch(`${API_URL}/tweet`);
+            const tweetsBanco = await res.json();
+            
+            const feedDaAPI = tweetsBanco.map(t => ({
+                id: t.id,
+                nome: t.user?.name || "Usuário",
+                arroba: t.user?.username || "usuario",
+                texto: t.content,
+                foto: "/assets/fotoDePerfil.jpg",
+                likes: t.likes ? t.likes.length : 0,
+
+                euCurti: t.likes ? t.likes.some(l => l.userId === user.id) : false,
+                comments: 0
+            }));
+
+            feed = [...feedDaAPI, ...feedPadrao];
+            renderizarFeed();
+        } catch (e) {
+            feed = feedPadrao;
+            renderizarFeed();
+        }
     }
 
     const feedPadrao = [
@@ -128,7 +116,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         <button onclick="curtir('${t.id}')" class="btn-action" style="color: ${t.euCurti ? '#f4212e' : 'inherit'}">
                             ${t.euCurti ? '❤️' : '🤍'} <span>${t.likes}</span>
                         </button>
-                        <button onclick="alert('Comentários via Postman')" class="btn-action">
+                        <button class="btn-action">
                             💬 <span>${t.comments}</span>
                         </button>
                     </div>
@@ -136,6 +124,18 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>`).join('');
     }
 
-    // INICIALIZAÇÃO
+    // --- TEMA E INICIALIZAÇÃO ---
+    const aplicarTema = (tema) => {
+        document.documentElement.classList.toggle('dark-mode', tema === 'dark');
+        if (btnTema) btnTema.textContent = tema === 'dark' ? '🌙' : '☀️';
+    };
+    if (btnTema) {
+        btnTema.onclick = () => {
+            const novoTema = document.documentElement.classList.contains('dark-mode') ? 'light' : 'dark';
+            localStorage.setItem('theme', novoTema);
+            aplicarTema(novoTema);
+        };
+    }
+    aplicarTema(localStorage.getItem('theme') || 'light');
     sincronizarUsuario();
 });
