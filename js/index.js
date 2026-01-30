@@ -56,6 +56,31 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
+    window.seguir = async (followingId) => {
+    if (followingId === user.id) return alert("Você não pode seguir a si mesmo!");
+
+    try {
+        const res = await fetch(`${API_URL}/follow`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                followerId: user.id,
+                followingId: followingId 
+            })
+        });
+
+        if (res.ok) {
+            console.log("✅ Agora você segue este usuário!");
+            await carregarTweets();
+        } else {
+            const erro = await res.json();
+            alert(erro.error);
+        }
+    } catch (error) {
+        console.error("❌ Erro ao seguir usuário");
+    }
+};
+
     if (btnTweetar) {
         btnTweetar.onclick = async () => {
             const texto = inputTweet.value.trim();
